@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual Art Gallery - Three.js</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loader"></div>
+      <p>Loading Gallery...</p>
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <p id="progress-text">0%</p>
+    </div>
+
+    <!-- Main Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+      <!-- Controls Info -->
+      <div id="controls-info" class="info-panel">
+        <h3>Controls</h3>
+        <p><strong>Mouse:</strong> Look around / Orbit</p>
+        <p><strong>WASD:</strong> Move (First-Person Mode)</p>
+        <p><strong>C:</strong> Toggle Camera Mode</p>
+        <p><strong>Scroll:</strong> Zoom (Orbit Mode)</p>
+        <p><strong>Click:</strong> Interact with artworks</p>
+        <p id="camera-mode">Mode: Orbit</p>
+      </div>
+
+      <!-- FPS Counter -->
+      <div id="fps-counter" class="info-panel">
+        FPS: <span id="fps-value">60</span>
+      </div>
+
+      <!-- Visitor Counter -->
+      <div id="visitor-counter" class="info-panel">
+        Gallery Visitors: <span id="visitor-count">2</span>
+      </div>
+    </div>
+
+    <!-- Artwork Information Modal -->
+    <div id="artwork-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="artwork-title"></h2>
+        <p id="artwork-artist"></p>
+        <p id="artwork-description"></p>
+      </div>
+    </div>
+
+    <!-- Crosshair for First-Person Mode -->
+    <div id="crosshair" class="hidden"></div>
+
+    <!-- Import Three.js and modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <!-- Main Application Scripts -->
+    <script type="module" src="utils.js"></script>
+    <script type="module" src="environment.js"></script>
+    <script type="module" src="lighting.js"></script>
+    <script type="module" src="artworks.js"></script>
+    <script type="module" src="actors.js"></script>
+    <script type="module" src="controls.js"></script>
+    <script type="module" src="interactions.js"></script>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
