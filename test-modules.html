@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module Test</title>
+    <style>
+      body {
+        background: #1a1a1a;
+        color: white;
+        font-family: monospace;
+        padding: 20px;
+      }
+      .success {
+        color: #4caf50;
+      }
+      .error {
+        color: #f44336;
+      }
+      .test {
+        margin: 10px 0;
+        padding: 10px;
+        background: #2a2a2a;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Module Loading Test</h1>
+    <p>This will test if all modules can be loaded...</p>
+    <div id="results"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module">
+      const results = document.getElementById("results");
+
+      function addResult(name, success, error = null) {
+        const div = document.createElement("div");
+        div.className = "test";
+        if (success) {
+          div.innerHTML = `<span class="success">✓</span> ${name} loaded successfully`;
+        } else {
+          div.innerHTML = `<span class="error">✗</span> ${name} FAILED<br><small>${error}</small>`;
+        }
+        results.appendChild(div);
+      }
+
+      async function testModules() {
+        const modules = [
+          { name: "THREE.js", path: "three" },
+          { name: "utils.js", path: "./utils.js" },
+          { name: "environment.js", path: "./environment.js" },
+          { name: "lighting.js", path: "./lighting.js" },
+          { name: "artworks.js", path: "./artworks.js" },
+          { name: "actors.js", path: "./actors.js" },
+          { name: "controls.js", path: "./controls.js" },
+          { name: "interactions.js", path: "./interactions.js" },
+          { name: "postProcessing.js (FIXED)", path: "./postProcessing.js" },
+          {
+            name: "environmentalEffects.js",
+            path: "./environmentalEffects.js",
+          },
+          { name: "interactiveExhibits.js", path: "./interactiveExhibits.js" },
+          { name: "advancedAnimations.js", path: "./advancedAnimations.js" },
+          { name: "enhancedAI.js", path: "./enhancedAI.js" },
+          { name: "wildlife.js", path: "./wildlife.js" },
+          { name: "uiEnhancements.js", path: "./uiEnhancements.js" },
+        ];
+
+        for (const module of modules) {
+          try {
+            await import(module.path);
+            addResult(module.name, true);
+          } catch (error) {
+            addResult(module.name, false, error.message);
+            console.error(`Error loading ${module.name}:`, error);
+          }
+        }
+
+        // Summary
+        const summary = document.createElement("div");
+        summary.style.cssText =
+          "margin-top: 20px; padding: 20px; background: #2a2a2a; border-radius: 5px; border: 2px solid #4CAF50;";
+        const successCount = document.querySelectorAll(".success").length;
+        const totalCount = modules.length;
+
+        if (successCount === totalCount) {
+          summary.innerHTML = `
+                    <h2 style="color: #4CAF50;">🎉 ALL TESTS PASSED!</h2>
+                    <p>All ${totalCount} modules loaded successfully.</p>
+                    <p><strong>You can now open index.html</strong></p>
+                `;
+        } else {
+          summary.innerHTML = `
+                    <h2 style="color: #FFC107;">⚠️ SOME TESTS FAILED</h2>
+                    <p>${successCount}/${totalCount} modules loaded successfully.</p>
+                    <p>Check the errors above and fix them before running the gallery.</p>
+                `;
+        }
+        results.appendChild(summary);
+      }
+
+      testModules();
+    </script>
+  </body>
+</html>

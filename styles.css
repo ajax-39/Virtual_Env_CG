@@ -290,3 +290,94 @@ body {
   font-size: 12px;
   pointer-events: none;
 }
+
+/* Additional styles for new features */
+
+/* Zoom Modal */
+.zoom-modal-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  text-align: center;
+}
+
+.zoom-modal-content img {
+  max-width: 90%;
+  max-height: 70vh;
+  border-radius: 8px;
+  margin: 20px auto;
+  display: block;
+}
+
+/* Audio Modal */
+.audio-modal-content {
+  max-width: 600px;
+}
+
+/* Keyboard shortcuts */
+kbd {
+  background: #333;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11px;
+  margin: 0 2px;
+  border: 1px solid #555;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Inventory and Achievement scrollbars */
+#inventory::-webkit-scrollbar,
+#achievements::-webkit-scrollbar {
+  width: 8px;
+}
+
+#inventory::-webkit-scrollbar-track,
+#achievements::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+#inventory::-webkit-scrollbar-thumb,
+#achievements::-webkit-scrollbar-thumb {
+  background: #4caf50;
+  border-radius: 4px;
+}
+
+#inventory::-webkit-scrollbar-thumb:hover,
+#achievements::-webkit-scrollbar-thumb:hover {
+  background: #45a049;
+}

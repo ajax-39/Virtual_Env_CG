@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual Art Gallery - Debug Mode</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loader"></div>
+      <p>Loading Gallery (Debug Mode)...</p>
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <p id="progress-text">0%</p>
+      <p id="debug-status" style="color: yellow; margin-top: 20px">
+        Checking modules...
+      </p>
+    </div>
+
+    <!-- Main Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+      <!-- Controls Info -->
+      <div id="controls-info" class="info-panel">
+        <h3>Controls (Debug Mode)</h3>
+        <p><strong>F12:</strong> Open Console for Errors</p>
+        <p><strong>Mouse:</strong> Look around / Orbit</p>
+        <p><strong>WASD:</strong> Move (First-Person Mode)</p>
+        <p><strong>C:</strong> Toggle Camera Mode</p>
+        <p style="color: yellow; margin-top: 10px">
+          ⚠️ Check browser console for errors
+        </p>
+      </div>
+
+      <!-- FPS Counter -->
+      <div id="fps-counter" class="info-panel">
+        FPS: <span id="fps-value">60</span>
+      </div>
+    </div>
+
+    <!-- Artwork Information Modal -->
+    <div id="artwork-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="artwork-title"></h2>
+        <p id="artwork-artist"></p>
+        <p id="artwork-description"></p>
+      </div>
+    </div>
+
+    <!-- Crosshair for First-Person Mode -->
+    <div id="crosshair" class="hidden"></div>
+
+    <!-- Import Three.js and modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <!-- Main Application Scripts -->
+    <script type="module">
+      console.log("=== STARTING DEBUG MODE ===");
+
+      const debugStatus = document.getElementById("debug-status");
+
+      try {
+        debugStatus.textContent = "Loading basic modules...";
+
+        // Import only basic modules first
+        const { default: THREE } = await import(
+          "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        );
+        console.log("✓ THREE.js loaded");
+        debugStatus.textContent = "THREE.js loaded...";
+
+        // Now try main.js
+        await import("./main.js");
+        console.log("✓ main.js loaded");
+        debugStatus.textContent = "Gallery loading...";
+      } catch (error) {
+        console.error("❌ ERROR:", error);
+        debugStatus.textContent = "ERROR! Check console (F12)";
+        debugStatus.style.color = "red";
+
+        // Show error on screen
+        const errorDiv = document.createElement("div");
+        errorDiv.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(255, 0, 0, 0.9);
+          color: white;
+          padding: 30px;
+          border-radius: 10px;
+          max-width: 600px;
+          z-index: 10000;
+        `;
+        errorDiv.innerHTML = `
+          <h2>Loading Error</h2>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p><strong>File:</strong> ${
+            error.stack ? error.stack.split("\n")[1] : "Unknown"
+          }</p>
+          <hr>
+          <p><strong>Common fixes:</strong></p>
+          <ul>
+            <li>Press F12 to see full error details</li>
+            <li>Check if all .js files are in the same folder</li>
+            <li>Try refreshing the page (Ctrl+Shift+R)</li>
+            <li>Check your internet connection (for Three.js CDN)</li>
+          </ul>
+        `;
+        document.body.appendChild(errorDiv);
+      }
+    </script>
+  </body>
+</html>

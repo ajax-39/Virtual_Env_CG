@@ -1,558 +1,533 @@
 /**
- * Enhanced Actors - Wildlife (birds, butterflies, fish), Smarter NPCs, Kinetic Sculptures
+ * Wildlife - Birds, Butterflies, Jellyfish, Dynamic elements
  */
 
 import * as THREE from "three";
 
 /**
- * Create flying birds with flocking behavior
+ * Create flying birds
  */
-export function createBirds(scene, count = 15, roomWidth, roomDepth, roomHeight) {
-  const birds = [];
-  const birdGroup = new THREE.Group();
-  birdGroup.name = "Birds";
+export function createBirds(scene, roomWidth, roomDepth, roomHeight) {
+  const birdsGroup = new THREE.Group();
+  birdsGroup.name = "Birds";
 
-  for (let i = 0; i < count; i++) {
+  const birdCount = 5;
+
+  for (let i = 0; i < birdCount; i++) {
     const bird = createBird();
     bird.position.set(
       (Math.random() - 0.5) * roomWidth * 0.8,
-      roomHeight * 0.6 + Math.random() * roomHeight * 0.3,
+      roomHeight * 0.7 + Math.random() * 0.5,
       (Math.random() - 0.5) * roomDepth * 0.8
     );
 
-    bird.userData = {
-      velocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.05,
-        (Math.random() - 0.5) * 0.02,
-        (Math.random() - 0.5) * 0.05
-      ),
-      wingPhase: Math.random() * Math.PI * 2,
-      bounds: { width: roomWidth, depth: roomDepth, height: roomHeight },
-    };
+    // Bird flight data
+    bird.userData.flightPath = generateFlightPath(
+      roomWidth,
+      roomDepth,
+      roomHeight
+    );
+    bird.userData.pathIndex = Math.floor(
+      Math.random() * bird.userData.flightPath.length
+    );
+    bird.userData.speed = 2 + Math.random();
+    bird.userData.wingPhase = Math.random() * Math.PI * 2;
 
-    birdGroup.add(bird);
-    birds.push(bird);
+    birdsGroup.add(bird);
   }
 
-  scene.add(birdGroup);
-  return birds;
+  return birdsGroup;
 }
 
+/**
+ * Create a single bird
+ */
 function createBird() {
-  const bird = new THREE.Group();
+  const birdGroup = new THREE.Group();
 
   // Body
   const bodyGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+  bodyGeometry.scale(1, 0.8, 1.3);
   const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8b4513,
-    roughness: 0.7,
+    color: 0x4a4a4a,
+    roughness: 0.8,
   });
   const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.scale.set(1, 0.8, 1.2);
-  bird.add(body);
+  birdGroup.add(body);
 
   // Head
   const headGeometry = new THREE.SphereGeometry(0.05, 8, 8);
   const head = new THREE.Mesh(headGeometry, bodyMaterial);
-  head.position.set(0, 0.05, 0.1);
-  bird.add(head);
+  head.position.set(0, 0.05, 0.08);
+  birdGroup.add(head);
+
+  // Beak
+  const beakGeometry = new THREE.ConeGeometry(0.015, 0.04, 4);
+  const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+  const beak = new THREE.Mesh(beakGeometry, beakMaterial);
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 0.05, 0.12);
+  birdGroup.add(beak);
 
   // Wings
-  const wingGeometry = new THREE.BoxGeometry(0.15, 0.02, 0.08);
+  const wingGeometry = new THREE.PlaneGeometry(0.12, 0.08);
   const wingMaterial = new THREE.MeshStandardMaterial({
-    color: 0x654321,
-    roughness: 0.6,
+    color: 0x3a3a3a,
+    side: THREE.DoubleSide,
   });
 
   const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  leftWing.position.set(-0.08, 0, 0);
-  bird.add(leftWing);
-  bird.userData.leftWing = leftWing;
+  leftWing.rotation.y = Math.PI / 4;
+  leftWing.position.x = -0.08;
+  birdGroup.add(leftWing);
 
   const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  rightWing.position.set(0.08, 0, 0);
-  bird.add(rightWing);
-  bird.userData.rightWing = rightWing;
+  rightWing.rotation.y = -Math.PI / 4;
+  rightWing.position.x = 0.08;
+  birdGroup.add(rightWing);
 
-  return bird;
+  // Store wings for animation
+  birdGroup.userData.leftWing = leftWing;
+  birdGroup.userData.rightWing = rightWing;
+
+  return birdGroup;
 }
 
 /**
- * Update bird flocking behavior
+ * Create butterflies near flowers
  */
-export function updateBirds(birds, deltaTime) {
-  const separationDistance = 0.5;
-  const alignmentDistance = 1.5;
-  const cohesionDistance = 2.0;
+export function createButterflies(scene, flowerPositions = null) {
+  const butterfliesGroup = new THREE.Group();
+  butterfliesGroup.name = "Butterflies";
 
-  birds.forEach((bird, index) => {
-    const separation = new THREE.Vector3();
-    const alignment = new THREE.Vector3();
-    const cohesion = new THREE.Vector3();
-    let separationCount = 0;
-    let alignmentCount = 0;
-    let cohesionCount = 0;
-
-    // Flocking calculations
-    birds.forEach((otherBird, otherIndex) => {
-      if (index === otherIndex) return;
-
-      const distance = bird.position.distanceTo(otherBird.position);
-
-      // Separation
-      if (distance < separationDistance) {
-        const diff = new THREE.Vector3()
-          .subVectors(bird.position, otherBird.position)
-          .normalize()
-          .divideScalar(distance);
-        separation.add(diff);
-        separationCount++;
-      }
-
-      // Alignment
-      if (distance < alignmentDistance) {
-        alignment.add(otherBird.userData.velocity);
-        alignmentCount++;
-      }
-
-      // Cohesion
-      if (distance < cohesionDistance) {
-        cohesion.add(otherBird.position);
-        cohesionCount++;
-      }
-    });
-
-    // Average and apply forces
-    if (separationCount > 0) {
-      separation.divideScalar(separationCount);
-      bird.userData.velocity.add(separation.multiplyScalar(0.05));
-    }
-
-    if (alignmentCount > 0) {
-      alignment.divideScalar(alignmentCount);
-      bird.userData.velocity.lerp(alignment, 0.05);
-    }
-
-    if (cohesionCount > 0) {
-      cohesion.divideScalar(cohesionCount);
-      const desired = cohesion.sub(bird.position).normalize().multiplyScalar(0.02);
-      bird.userData.velocity.add(desired);
-    }
-
-    // Boundary avoidance
-    const bounds = bird.userData.bounds;
-    const margin = 2;
-
-    if (bird.position.x > bounds.width / 2 - margin) {
-      bird.userData.velocity.x -= 0.01;
-    } else if (bird.position.x < -bounds.width / 2 + margin) {
-      bird.userData.velocity.x += 0.01;
-    }
-
-    if (bird.position.z > bounds.depth / 2 - margin) {
-      bird.userData.velocity.z -= 0.01;
-    } else if (bird.position.z < -bounds.depth / 2 + margin) {
-      bird.userData.velocity.z += 0.01;
-    }
-
-    if (bird.position.y > bounds.height - margin) {
-      bird.userData.velocity.y -= 0.01;
-    } else if (bird.position.y < bounds.height * 0.5) {
-      bird.userData.velocity.y += 0.01;
-    }
-
-    // Limit speed
-    const maxSpeed = 0.1;
-    if (bird.userData.velocity.length() > maxSpeed) {
-      bird.userData.velocity.normalize().multiplyScalar(maxSpeed);
-    }
-
-    // Update position
-    bird.position.add(bird.userData.velocity);
-
-    // Update rotation to face direction
-    if (bird.userData.velocity.length() > 0.01) {
-      const direction = bird.userData.velocity.clone().normalize();
-      bird.lookAt(bird.position.clone().add(direction));
-    }
-
-    // Wing flapping animation
-    bird.userData.wingPhase += deltaTime * 10;
-    const wingAngle = Math.sin(bird.userData.wingPhase) * 0.5;
-    if (bird.userData.leftWing) {
-      bird.userData.leftWing.rotation.z = wingAngle;
-    }
-    if (bird.userData.rightWing) {
-      bird.userData.rightWing.rotation.z = -wingAngle;
-    }
-  });
-}
-
-/**
- * Create butterflies
- */
-export function createButterflies(scene, count = 10, roomWidth, roomDepth) {
-  const butterflies = [];
-  const butterflyGroup = new THREE.Group();
-  butterflyGroup.name = "Butterflies";
-
-  for (let i = 0; i < count; i++) {
-    const butterfly = createButterfly();
-    butterfly.position.set(
-      (Math.random() - 0.5) * roomWidth * 0.6,
-      0.5 + Math.random() * 2,
-      (Math.random() - 0.5) * roomDepth * 0.6
-    );
-
-    butterfly.userData = {
-      velocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.02,
-        (Math.random() - 0.5) * 0.01,
-        (Math.random() - 0.5) * 0.02
-      ),
-      wingPhase: Math.random() * Math.PI * 2,
-      wanderAngle: Math.random() * Math.PI * 2,
-      bounds: { width: roomWidth, depth: roomDepth },
-    };
-
-    butterflyGroup.add(butterfly);
-    butterflies.push(butterfly);
+  // If no flower positions provided, create default positions
+  if (!flowerPositions) {
+    flowerPositions = [
+      new THREE.Vector3(-6, 1.5, 4),
+      new THREE.Vector3(6, 1.5, 4),
+      new THREE.Vector3(0, 1.5, -4),
+    ];
   }
 
-  scene.add(butterflyGroup);
-  return butterflies;
+  flowerPositions.forEach((pos, index) => {
+    // Create 2-3 butterflies per flower
+    const butterflyCount = 2 + Math.floor(Math.random() * 2);
+
+    for (let i = 0; i < butterflyCount; i++) {
+      const butterfly = createButterfly();
+      butterfly.position.copy(pos);
+      butterfly.position.x += (Math.random() - 0.5) * 2;
+      butterfly.position.z += (Math.random() - 0.5) * 2;
+
+      butterfly.userData.centerPoint = pos.clone();
+      butterfly.userData.orbitRadius = 0.5 + Math.random() * 0.5;
+      butterfly.userData.orbitSpeed = 0.5 + Math.random() * 0.5;
+      butterfly.userData.heightOffset = Math.random() * Math.PI * 2;
+      butterfly.userData.wingPhase = Math.random() * Math.PI * 2;
+
+      butterfliesGroup.add(butterfly);
+    }
+  });
+
+  return butterfliesGroup;
 }
 
+/**
+ * Create a single butterfly
+ */
 function createButterfly() {
-  const butterfly = new THREE.Group();
+  const butterflyGroup = new THREE.Group();
 
   // Body
-  const bodyGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 8);
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: 0x000000,
-    roughness: 0.8,
-  });
+  const bodyGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.08, 6);
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
   const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  butterfly.add(body);
+  body.rotation.z = Math.PI / 2;
+  butterflyGroup.add(body);
 
-  // Wings
+  // Wing geometry
   const wingShape = new THREE.Shape();
   wingShape.moveTo(0, 0);
-  wingShape.quadraticCurveTo(0.1, 0.05, 0.15, 0.15);
-  wingShape.quadraticCurveTo(0.1, 0.2, 0, 0.15);
-  wingShape.lineTo(0, 0);
+  wingShape.bezierCurveTo(0.1, 0.1, 0.15, 0.12, 0.15, 0.15);
+  wingShape.bezierCurveTo(0.15, 0.12, 0.1, 0.08, 0, 0);
 
   const wingGeometry = new THREE.ShapeGeometry(wingShape);
-  const wingMaterials = [
-    new THREE.MeshStandardMaterial({
-      color: 0xff6b9d,
-      roughness: 0.5,
-      side: THREE.DoubleSide,
-    }),
-    new THREE.MeshStandardMaterial({
-      color: 0x4ecdc4,
-      roughness: 0.5,
-      side: THREE.DoubleSide,
-    }),
-    new THREE.MeshStandardMaterial({
-      color: 0xffe66d,
-      roughness: 0.5,
-      side: THREE.DoubleSide,
-    }),
+  const wingColors = [0xff69b4, 0x9370db, 0x00ced1, 0xffa500, 0xff1493];
+  const wingColor = wingColors[Math.floor(Math.random() * wingColors.length)];
+
+  const wingMaterial = new THREE.MeshStandardMaterial({
+    color: wingColor,
+    side: THREE.DoubleSide,
+    emissive: wingColor,
+    emissiveIntensity: 0.2,
+  });
+
+  // Left wings
+  const leftWingTop = new THREE.Mesh(wingGeometry, wingMaterial);
+  leftWingTop.position.set(-0.04, 0, 0.03);
+  leftWingTop.rotation.y = Math.PI;
+  butterflyGroup.add(leftWingTop);
+
+  const leftWingBottom = new THREE.Mesh(wingGeometry, wingMaterial);
+  leftWingBottom.scale.set(0.8, 0.8, 0.8);
+  leftWingBottom.position.set(-0.04, 0, -0.03);
+  leftWingBottom.rotation.y = Math.PI;
+  leftWingBottom.rotation.x = Math.PI;
+  butterflyGroup.add(leftWingBottom);
+
+  // Right wings
+  const rightWingTop = new THREE.Mesh(wingGeometry, wingMaterial);
+  rightWingTop.position.set(0.04, 0, 0.03);
+  butterflyGroup.add(rightWingTop);
+
+  const rightWingBottom = new THREE.Mesh(wingGeometry, wingMaterial);
+  rightWingBottom.scale.set(0.8, 0.8, 0.8);
+  rightWingBottom.position.set(0.04, 0, -0.03);
+  rightWingBottom.rotation.x = Math.PI;
+  butterflyGroup.add(rightWingBottom);
+
+  // Store wings for animation
+  butterflyGroup.userData.wings = [
+    leftWingTop,
+    leftWingBottom,
+    rightWingTop,
+    rightWingBottom,
   ];
 
-  const wingMaterial = wingMaterials[Math.floor(Math.random() * wingMaterials.length)];
+  butterflyGroup.scale.setScalar(0.8);
 
-  const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  leftWing.rotation.y = Math.PI / 2;
-  leftWing.position.x = -0.01;
-  butterfly.add(leftWing);
-  butterfly.userData.leftWing = leftWing;
-
-  const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  rightWing.rotation.y = -Math.PI / 2;
-  rightWing.position.x = 0.01;
-  butterfly.add(rightWing);
-  butterfly.userData.rightWing = rightWing;
-
-  return butterfly;
+  return butterflyGroup;
 }
 
 /**
- * Update butterfly wandering behavior
+ * Create aquarium with floating jellyfish
  */
-export function updateButterflies(butterflies, deltaTime) {
-  butterflies.forEach((butterfly) => {
-    // Random wandering
-    butterfly.userData.wanderAngle += (Math.random() - 0.5) * 0.1;
+export function createAquarium(x, y, z) {
+  const aquariumGroup = new THREE.Group();
+  aquariumGroup.name = "Aquarium";
 
-    const wanderForce = new THREE.Vector3(
-      Math.cos(butterfly.userData.wanderAngle) * 0.001,
-      (Math.random() - 0.5) * 0.0005,
-      Math.sin(butterfly.userData.wanderAngle) * 0.001
-    );
+  // Tank dimensions
+  const width = 2;
+  const height = 2;
+  const depth = 0.6;
 
-    butterfly.userData.velocity.add(wanderForce);
-
-    // Boundary check
-    const bounds = butterfly.userData.bounds;
-    if (Math.abs(butterfly.position.x) > bounds.width / 2 - 1) {
-      butterfly.userData.velocity.x *= -0.5;
-    }
-    if (Math.abs(butterfly.position.z) > bounds.depth / 2 - 1) {
-      butterfly.userData.velocity.z *= -0.5;
-    }
-    if (butterfly.position.y < 0.3 || butterfly.position.y > 3) {
-      butterfly.userData.velocity.y *= -0.5;
-    }
-
-    // Limit speed
-    const maxSpeed = 0.05;
-    if (butterfly.userData.velocity.length() > maxSpeed) {
-      butterfly.userData.velocity.normalize().multiplyScalar(maxSpeed);
-    }
-
-    // Update position
-    butterfly.position.add(butterfly.userData.velocity);
-
-    // Wing flapping
-    butterfly.userData.wingPhase += deltaTime * 15;
-    const wingAngle = Math.sin(butterfly.userData.wingPhase) * 0.8;
-
-    if (butterfly.userData.leftWing) {
-      butterfly.userData.leftWing.rotation.z = wingAngle;
-    }
-    if (butterfly.userData.rightWing) {
-      butterfly.userData.rightWing.rotation.z = -wingAngle;
-    }
-
-    // Face movement direction
-    if (butterfly.userData.velocity.length() > 0.01) {
-      const direction = butterfly.userData.velocity.clone().normalize();
-      butterfly.lookAt(butterfly.position.clone().add(direction));
-      butterfly.rotateX(Math.PI / 2);
-    }
-  });
-}
-
-/**
- * Create aquarium with fish
- */
-export function createAquarium(scene, position) {
-  const group = new THREE.Group();
-  group.position.copy(position);
-
-  // Glass tank
-  const tankGeometry = new THREE.BoxGeometry(2, 1.5, 0.8);
-  const tankMaterial = new THREE.MeshPhysicalMaterial({
+  // Glass box
+  const glassGeometry = new THREE.BoxGeometry(width, height, depth);
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x88ccff,
     transparent: true,
-    opacity: 0.2,
-    roughness: 0.1,
-    transmission: 0.95,
+    opacity: 0.3,
+    roughness: 0,
+    metalness: 0,
+    transmission: 0.9,
     thickness: 0.5,
   });
-  const tank = new THREE.Mesh(tankGeometry, tankMaterial);
-  tank.position.y = 1.5;
-  group.add(tank);
+  const glass = new THREE.Mesh(glassGeometry, glassMaterial);
+  glass.position.y = height / 2;
+  aquariumGroup.add(glass);
 
-  // Water inside
-  const waterGeometry = new THREE.BoxGeometry(1.9, 1.4, 0.7);
-  const waterMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x0077be,
-    transparent: true,
-    opacity: 0.5,
-    roughness: 0,
+  // Frame
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2c3e50,
+    metalness: 0.6,
+    roughness: 0.4,
   });
-  const water = new THREE.Mesh(waterGeometry, waterMaterial);
-  water.position.y = 1.5;
-  group.add(water);
 
-  // Stand
-  const standGeometry = new THREE.BoxGeometry(2.2, 0.8, 1);
-  const standMaterial = new THREE.MeshStandardMaterial({
-    color: 0x4a4a4a,
-    roughness: 0.6,
+  const frameThickness = 0.05;
+  const framePositions = [
+    {
+      size: [width + frameThickness, frameThickness, depth],
+      pos: [0, height + frameThickness / 2, 0],
+    },
+    {
+      size: [width + frameThickness, frameThickness, depth],
+      pos: [0, -frameThickness / 2, 0],
+    },
+    {
+      size: [frameThickness, height, depth],
+      pos: [-width / 2 - frameThickness / 2, height / 2, 0],
+    },
+    {
+      size: [frameThickness, height, depth],
+      pos: [width / 2 + frameThickness / 2, height / 2, 0],
+    },
+  ];
+
+  framePositions.forEach((frame) => {
+    const frameGeometry = new THREE.BoxGeometry(...frame.size);
+    const framePiece = new THREE.Mesh(frameGeometry, frameMaterial);
+    framePiece.position.set(...frame.pos);
+    aquariumGroup.add(framePiece);
   });
-  const stand = new THREE.Mesh(standGeometry, standMaterial);
-  stand.position.y = 0.4;
-  stand.castShadow = true;
-  group.add(stand);
 
-  // Create fish
-  const fish = [];
-  for (let i = 0; i < 8; i++) {
-    const fishMesh = createFish();
-    fishMesh.position.set(
-      (Math.random() - 0.5) * 1.5,
-      1.2 + (Math.random() - 0.5) * 1.0,
-      (Math.random() - 0.5) * 0.5
+  // Create jellyfish inside
+  const jellyfishCount = 3;
+  const jellyfish = [];
+
+  for (let i = 0; i < jellyfishCount; i++) {
+    const jelly = createJellyfish();
+    jelly.position.set(
+      (Math.random() - 0.5) * (width - 0.4),
+      height / 2 + (Math.random() - 0.5) * (height - 0.5),
+      (Math.random() - 0.5) * (depth - 0.3)
     );
-    fishMesh.userData = {
-      velocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.01,
-        (Math.random() - 0.5) * 0.005,
-        (Math.random() - 0.5) * 0.01
-      ),
-      tankBounds: { x: 0.9, y: 0.6, z: 0.3 },
-      centerY: 1.5,
-    };
-    group.add(fishMesh);
-    fish.push(fishMesh);
+
+    jelly.userData.swimPath = generateJellyfishPath(width, height, depth);
+    jelly.userData.pathIndex = Math.floor(
+      Math.random() * jelly.userData.swimPath.length
+    );
+    jelly.userData.speed = 0.3 + Math.random() * 0.2;
+    jelly.userData.pulsePhase = Math.random() * Math.PI * 2;
+
+    jellyfish.push(jelly);
+    aquariumGroup.add(jelly);
   }
 
   // Light inside aquarium
-  const aquariumLight = new THREE.PointLight(0x00aaff, 0.5, 3);
-  aquariumLight.position.y = 2.2;
-  group.add(aquariumLight);
+  const aquariumLight = new THREE.PointLight(0x4fc3f7, 1, 3);
+  aquariumLight.position.set(0, height, 0);
+  aquariumGroup.add(aquariumLight);
 
-  scene.add(group);
+  aquariumGroup.position.set(x, y, z);
+  aquariumGroup.userData.jellyfish = jellyfish;
 
-  return { aquariumGroup: group, fish: fish };
-}
-
-function createFish() {
-  const fish = new THREE.Group();
-
-  // Body
-  const bodyGeometry = new THREE.SphereGeometry(0.08, 8, 8);
-  const colors = [0xff6b6b, 0xffa500, 0xffff00, 0x4ecdc4, 0xc44569];
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: colors[Math.floor(Math.random() * colors.length)],
-    roughness: 0.4,
-    metalness: 0.2,
-  });
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.scale.set(1.5, 1, 1);
-  fish.add(body);
-
-  // Tail
-  const tailGeometry = new THREE.ConeGeometry(0.06, 0.12, 8);
-  const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-  tail.rotation.z = -Math.PI / 2;
-  tail.position.x = -0.14;
-  fish.add(tail);
-  fish.userData.tail = tail;
-
-  return fish;
+  return aquariumGroup;
 }
 
 /**
- * Update fish swimming behavior
+ * Create a single jellyfish
  */
-export function updateFish(fish, deltaTime) {
-  fish.forEach((fishMesh) => {
-    const bounds = fishMesh.userData.tankBounds;
-    const center = fishMesh.userData.centerY;
+function createJellyfish() {
+  const jellyfishGroup = new THREE.Group();
 
-    // Random swimming movement
-    fishMesh.userData.velocity.x += (Math.random() - 0.5) * 0.0005;
-    fishMesh.userData.velocity.y += (Math.random() - 0.5) * 0.0002;
-    fishMesh.userData.velocity.z += (Math.random() - 0.5) * 0.0005;
-
-    // Boundary avoidance
-    const localPos = fishMesh.position.clone();
-    localPos.y -= center;
-
-    if (Math.abs(localPos.x) > bounds.x) {
-      fishMesh.userData.velocity.x *= -0.5;
-    }
-    if (Math.abs(localPos.y) > bounds.y) {
-      fishMesh.userData.velocity.y *= -0.5;
-    }
-    if (Math.abs(localPos.z) > bounds.z) {
-      fishMesh.userData.velocity.z *= -0.5;
-    }
-
-    // Limit speed
-    const maxSpeed = 0.02;
-    if (fishMesh.userData.velocity.length() > maxSpeed) {
-      fishMesh.userData.velocity.normalize().multiplyScalar(maxSpeed);
-    }
-
-    // Update position
-    fishMesh.position.add(fishMesh.userData.velocity);
-
-    // Face swimming direction
-    if (fishMesh.userData.velocity.length() > 0.001) {
-      const direction = fishMesh.userData.velocity.clone().normalize();
-      fishMesh.lookAt(fishMesh.position.clone().add(direction));
-    }
-
-    // Tail wagging
-    if (fishMesh.userData.tail) {
-      fishMesh.userData.tail.rotation.y =
-        Math.sin(Date.now() * 0.01) * 0.3;
-    }
+  // Bell/head
+  const bellGeometry = new THREE.SphereGeometry(
+    0.15,
+    16,
+    16,
+    0,
+    Math.PI * 2,
+    0,
+    Math.PI / 2
+  );
+  const bellMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff1493,
+    transparent: true,
+    opacity: 0.6,
+    emissive: 0xff69b4,
+    emissiveIntensity: 0.3,
   });
-}
+  const bell = new THREE.Mesh(bellGeometry, bellMaterial);
+  bell.rotation.x = Math.PI;
+  jellyfishGroup.add(bell);
 
-/**
- * Create kinetic sculpture with gears
- */
-export function createKineticSculpture(scene, position) {
-  const group = new THREE.Group();
-  group.position.copy(position);
+  // Tentacles
+  const tentacleCount = 8;
+  const tentacles = [];
 
-  // Create interconnected gears
-  const gears = [];
+  for (let i = 0; i < tentacleCount; i++) {
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(
+        (Math.random() - 0.5) * 0.1,
+        -0.15,
+        (Math.random() - 0.5) * 0.1
+      ),
+      new THREE.Vector3(
+        (Math.random() - 0.5) * 0.15,
+        -0.3,
+        (Math.random() - 0.5) * 0.15
+      )
+    );
 
-  for (let i = 0; i < 3; i++) {
-    const gear = createGear(0.3 + i * 0.1, 12 + i * 4);
-    gear.position.set(i * 0.6 - 0.6, 1.5 + i * 0.3, 0);
-    gear.userData = {
-      rotationSpeed: (i % 2 === 0 ? 1 : -1) * (1 + i * 0.5),
-    };
-    group.add(gear);
-    gears.push(gear);
+    const tentacleGeometry = new THREE.TubeGeometry(curve, 10, 0.01, 4, false);
+    const tentacleMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffc0cb,
+      transparent: true,
+      opacity: 0.7,
+    });
+
+    const tentacle = new THREE.Mesh(tentacleGeometry, tentacleMaterial);
+
+    const angle = (i / tentacleCount) * Math.PI * 2;
+    tentacle.position.x = Math.cos(angle) * 0.12;
+    tentacle.position.z = Math.sin(angle) * 0.12;
+
+    jellyfishGroup.add(tentacle);
+    tentacles.push(tentacle);
   }
 
-  scene.add(group);
+  jellyfishGroup.userData.bell = bell;
+  jellyfishGroup.userData.tentacles = tentacles;
+  jellyfishGroup.scale.setScalar(0.8);
 
-  return { kineticGroup: group, gears: gears };
-}
-
-function createGear(radius, teeth) {
-  const gear = new THREE.Group();
-
-  // Central disc
-  const discGeometry = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, 0.1, 32);
-  const discMaterial = new THREE.MeshStandardMaterial({
-    color: 0x888888,
-    roughness: 0.4,
-    metalness: 0.8,
-  });
-  const disc = new THREE.Mesh(discGeometry, discMaterial);
-  disc.castShadow = true;
-  gear.add(disc);
-
-  // Teeth
-  const toothGeometry = new THREE.BoxGeometry(radius * 0.2, 0.12, radius * 0.15);
-  const toothMaterial = new THREE.MeshStandardMaterial({
-    color: 0xaaaaaa,
-    roughness: 0.5,
-    metalness: 0.7,
-  });
-
-  for (let i = 0; i < teeth; i++) {
-    const angle = (i / teeth) * Math.PI * 2;
-    const tooth = new THREE.Mesh(toothGeometry, toothMaterial);
-    tooth.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-    tooth.rotation.y = angle;
-    tooth.castShadow = true;
-    gear.add(tooth);
-  }
-
-  return gear;
+  return jellyfishGroup;
 }
 
 /**
- * Update kinetic sculpture
+ * Update all wildlife
  */
-export function updateKineticSculpture(kineticData, deltaTime) {
-  if (!kineticData || !kineticData.gears) return;
+export function updateWildlife(wildlifeObjects, deltaTime, elapsedTime) {
+  wildlifeObjects.forEach((obj) => {
+    if (!obj) return;
 
-  kineticData.gears.forEach((gear) => {
-    gear.rotation.y += gear.userData.rotationSpeed * deltaTime;
+    if (obj.name === "Birds") {
+      updateBirds(obj, deltaTime, elapsedTime);
+    } else if (obj.name === "Butterflies") {
+      updateButterflies(obj, deltaTime, elapsedTime);
+    } else if (obj.name === "Aquarium") {
+      updateAquarium(obj, deltaTime, elapsedTime);
+    }
   });
+}
+
+/**
+ * Update birds flight
+ */
+function updateBirds(birdsGroup, deltaTime, elapsedTime) {
+  birdsGroup.children.forEach((bird) => {
+    const path = bird.userData.flightPath;
+    const speed = bird.userData.speed;
+
+    // Move along path
+    bird.userData.pathIndex =
+      (bird.userData.pathIndex + speed * deltaTime * 0.1) % path.length;
+    const index = Math.floor(bird.userData.pathIndex);
+    const nextIndex = (index + 1) % path.length;
+
+    const current = path[index];
+    const next = path[nextIndex];
+    const t = bird.userData.pathIndex - index;
+
+    bird.position.lerpVectors(current, next, t);
+
+    // Orient bird toward movement direction
+    const direction = new THREE.Vector3().subVectors(next, current).normalize();
+    const angle = Math.atan2(direction.x, direction.z);
+    bird.rotation.y = angle;
+
+    // Wing flapping
+    const wingAngle =
+      Math.sin(elapsedTime * 10 + bird.userData.wingPhase) * 0.5;
+    if (bird.userData.leftWing) {
+      bird.userData.leftWing.rotation.y = Math.PI / 4 + wingAngle;
+      bird.userData.rightWing.rotation.y = -Math.PI / 4 - wingAngle;
+    }
+  });
+}
+
+/**
+ * Update butterflies
+ */
+function updateButterflies(butterfliesGroup, deltaTime, elapsedTime) {
+  butterfliesGroup.children.forEach((butterfly) => {
+    const center = butterfly.userData.centerPoint;
+    const radius = butterfly.userData.orbitRadius;
+    const speed = butterfly.userData.orbitSpeed;
+    const heightOffset = butterfly.userData.heightOffset;
+
+    // Orbit around center point
+    const angle = elapsedTime * speed;
+    butterfly.position.x = center.x + Math.cos(angle) * radius;
+    butterfly.position.z = center.z + Math.sin(angle) * radius;
+    butterfly.position.y =
+      center.y + Math.sin(elapsedTime * 2 + heightOffset) * 0.3;
+
+    // Rotate to face movement direction
+    butterfly.rotation.y = angle + Math.PI / 2;
+
+    // Wing flapping
+    const wings = butterfly.userData.wings;
+    const flapAngle =
+      Math.sin(elapsedTime * 8 + butterfly.userData.wingPhase) * 0.8;
+
+    wings.forEach((wing, index) => {
+      if (index < 2) {
+        // Left wings
+        wing.rotation.y = Math.PI - flapAngle;
+      } else {
+        // Right wings
+        wing.rotation.y = flapAngle;
+      }
+    });
+  });
+}
+
+/**
+ * Update aquarium jellyfish
+ */
+function updateAquarium(aquarium, deltaTime, elapsedTime) {
+  const jellyfish = aquarium.userData.jellyfish;
+
+  jellyfish.forEach((jelly) => {
+    const path = jelly.userData.swimPath;
+    const speed = jelly.userData.speed;
+
+    // Move along path
+    jelly.userData.pathIndex =
+      (jelly.userData.pathIndex + speed * deltaTime * 0.5) % path.length;
+    const index = Math.floor(jelly.userData.pathIndex);
+    const nextIndex = (index + 1) % path.length;
+
+    const current = path[index];
+    const next = path[nextIndex];
+    const t = jelly.userData.pathIndex - index;
+
+    jelly.position.lerpVectors(current, next, t);
+
+    // Pulsing animation
+    const pulse =
+      1 + Math.sin(elapsedTime * 3 + jelly.userData.pulsePhase) * 0.1;
+    if (jelly.userData.bell) {
+      jelly.userData.bell.scale.set(pulse, pulse * 0.8, pulse);
+    }
+
+    // Gentle rotation
+    jelly.rotation.y = elapsedTime * 0.2 + jelly.userData.pulsePhase;
+  });
+}
+
+/**
+ * Generate flight path for birds
+ */
+function generateFlightPath(roomWidth, roomDepth, roomHeight) {
+  const path = [];
+  const pointCount = 20;
+
+  for (let i = 0; i < pointCount; i++) {
+    const angle = (i / pointCount) * Math.PI * 2;
+    const radiusX = roomWidth * 0.4;
+    const radiusZ = roomDepth * 0.4;
+
+    path.push(
+      new THREE.Vector3(
+        Math.cos(angle) * radiusX,
+        roomHeight * 0.7 + Math.sin(angle * 3) * 0.3,
+        Math.sin(angle) * radiusZ
+      )
+    );
+  }
+
+  return path;
+}
+
+/**
+ * Generate swim path for jellyfish
+ */
+function generateJellyfishPath(width, height, depth) {
+  const path = [];
+  const pointCount = 15;
+
+  for (let i = 0; i < pointCount; i++) {
+    const angle = (i / pointCount) * Math.PI * 2;
+    path.push(
+      new THREE.Vector3(
+        Math.cos(angle) * (width * 0.3),
+        height / 2 + Math.sin(angle * 2) * (height * 0.2),
+        Math.sin(angle * 1.5) * (depth * 0.2)
+      )
+    );
+  }
+
+  return path;
 }
