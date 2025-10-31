@@ -12,12 +12,12 @@ export function setupLighting(scene, roomWidth, roomDepth, roomHeight) {
   lightingGroup.name = "Lighting";
 
   // 1. Ambient Light - Base illumination
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
   ambientLight.name = "AmbientLight";
   lightingGroup.add(ambientLight);
 
   // 2. Directional Light - Simulates sunlight/skylight
-  const directionalLight = new THREE.DirectionalLight(0xfffaf0, 0.6);
+  const directionalLight = new THREE.DirectionalLight(0xfffaf0, 0.8);
   directionalLight.position.set(5, 10, 5);
   directionalLight.castShadow = true;
 
@@ -45,12 +45,12 @@ export function setupLighting(scene, roomWidth, roomDepth, roomHeight) {
   ];
 
   spotlightPositions.forEach((pos, index) => {
-    const spotlight = new THREE.SpotLight(0xffffff, 1.0);
+    const spotlight = new THREE.SpotLight(0xffffff, 1.5);
     spotlight.position.set(pos.x, roomHeight - 0.3, pos.z);
     spotlight.angle = Math.PI / 6; // 30 degrees
-    spotlight.penumbra = 0.3;
+    spotlight.penumbra = 0.4;
     spotlight.decay = 2;
-    spotlight.distance = 10;
+    spotlight.distance = 12;
     spotlight.castShadow = true;
 
     spotlight.shadow.mapSize.width = 1024;

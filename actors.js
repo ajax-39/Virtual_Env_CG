@@ -43,12 +43,14 @@ export function createActors(scene, roomWidth, roomDepth, roomHeight) {
  * Create floating dust particles
  */
 export function createParticles(scene, roomWidth, roomDepth, roomHeight) {
-  const particleCount = 800;
+  const particleCount = 1500; // Increased from 800
   const particles = new THREE.Group();
   particles.name = "Particles";
 
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+  const sizes = new Float32Array(particleCount);
   const velocities = [];
 
   for (let i = 0; i < particleCount; i++) {
@@ -56,22 +58,34 @@ export function createParticles(scene, roomWidth, roomDepth, roomHeight) {
     positions[i * 3 + 1] = Math.random() * roomHeight;
     positions[i * 3 + 2] = (Math.random() - 0.5) * roomDepth;
 
+    // Varied colors (mostly white with some gold tint)
+    const colorVariation = Math.random() > 0.7 ? 1.0 : 0.95;
+    colors[i * 3] = colorVariation;
+    colors[i * 3 + 1] = colorVariation * 0.98;
+    colors[i * 3 + 2] = colorVariation * 0.9;
+
+    // Varied sizes
+    sizes[i] = Math.random() * 0.08 + 0.03;
+
     velocities.push({
       x: (Math.random() - 0.5) * 0.02,
-      y: Math.random() * 0.01 + 0.005,
+      y: Math.random() * 0.015 + 0.005,
       z: (Math.random() - 0.5) * 0.02,
     });
   }
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
 
   const material = new THREE.PointsMaterial({
-    color: 0xffffff,
     size: 0.05,
+    vertexColors: true,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.7,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
+    sizeAttenuation: true,
   });
 
   const particleSystem = new THREE.Points(geometry, material);
@@ -89,7 +103,7 @@ export function createParticles(scene, roomWidth, roomDepth, roomHeight) {
 }
 
 /**
- * Create standing visitor character
+ * Create standing visitor character (now also walks around)
  */
 function createStandingVisitor(x, z) {
   const visitor = createSimpleHumanoid(0x3498db);
@@ -97,11 +111,29 @@ function createStandingVisitor(x, z) {
   visitor.rotation.y = Math.PI / 4;
   visitor.name = "StandingVisitor";
 
+  // Define walking path (different from the other visitor)
+  const path = [
+    { x: -5, y: 0, z: 3 }, // Start position
+    { x: -7, y: 0, z: 0 }, // Left side
+    { x: -7, y: 0, z: -3 }, // Back left corner
+    { x: 0, y: 0, z: -5 }, // Back center
+    { x: 7, y: 0, z: -3 }, // Back right corner
+    { x: 7, y: 0, z: 0 }, // Right side
+    { x: 5, y: 0, z: 4 }, // Front right
+    { x: -5, y: 0, z: 3 }, // Back to start
+  ];
+
   // Animation data
   visitor.userData = {
-    type: "standing",
-    idleTime: 0,
-    swayAmount: 0.05,
+    type: "walking",
+    path: path,
+    pathProgress: 0,
+    speed: 0.015, // Slightly slower than the other visitor
+    pausePoints: [], // No pauses - continuous movement
+    pauseTime: 0,
+    pauseDuration: 0,
+    isPaused: false,
+    walkCycle: 0,
   };
 
   return visitor;
@@ -131,9 +163,9 @@ function createWalkingVisitor(roomWidth, roomDepth) {
     path: path,
     pathProgress: 0,
     speed: 0.02,
-    pausePoints: [0.14, 0.43, 0.71], // Normalized path positions to pause at
+    pausePoints: [], // No pauses - continuous movement
     pauseTime: 0,
-    pauseDuration: 3,
+    pauseDuration: 0,
     isPaused: false,
     walkCycle: 0,
   };
@@ -142,7 +174,7 @@ function createWalkingVisitor(roomWidth, roomDepth) {
 }
 
 /**
- * Create security camera
+ * Create security camera (now patrols around the ceiling)
  */
 function createSecurityCamera(roomWidth, roomDepth, roomHeight) {
   const group = new THREE.Group();
@@ -191,8 +223,21 @@ function createSecurityCamera(roomWidth, roomDepth, roomHeight) {
   group.rotation.y = -Math.PI / 4;
   group.name = "SecurityCamera";
 
+  // Define ceiling patrol path (rectangle around the ceiling)
+  const path = [
+    { x: -roomWidth / 2 + 1, y: roomHeight - 0.3, z: -roomDepth / 2 + 1 },
+    { x: roomWidth / 2 - 1, y: roomHeight - 0.3, z: -roomDepth / 2 + 1 },
+    { x: roomWidth / 2 - 1, y: roomHeight - 0.3, z: roomDepth / 2 - 1 },
+    { x: -roomWidth / 2 + 1, y: roomHeight - 0.3, z: roomDepth / 2 - 1 },
+    { x: -roomWidth / 2 + 1, y: roomHeight - 0.3, z: -roomDepth / 2 + 1 },
+  ];
+
   // Animation data
   group.userData = {
+    type: "patrolling",
+    path: path,
+    pathProgress: 0,
+    speed: 0.01, // Slow patrol speed
     sweepAngle: Math.PI / 3,
     sweepSpeed: 0.5,
     sweepTime: 0,
@@ -267,17 +312,9 @@ function createAnimatedSculpture() {
  * Update all actor animations
  */
 export function updateActors(actors, deltaTime) {
-  // Update standing visitor (subtle sway)
+  // Update standing visitor (now also walks)
   if (actors.standingVisitor) {
-    const visitor = actors.standingVisitor;
-    visitor.userData.idleTime += deltaTime;
-    const sway =
-      Math.sin(visitor.userData.idleTime) * visitor.userData.swayAmount;
-    visitor.rotation.z = sway;
-
-    // Slight head rotation
-    visitor.children[1].rotation.y =
-      Math.sin(visitor.userData.idleTime * 0.5) * 0.2;
+    updateWalkingVisitor(actors.standingVisitor, deltaTime);
   }
 
   // Update walking visitor
@@ -285,7 +322,7 @@ export function updateActors(actors, deltaTime) {
     updateWalkingVisitor(actors.walkingVisitor, deltaTime);
   }
 
-  // Update security camera
+  // Update security camera (now patrols)
   if (actors.securityCamera) {
     updateSecurityCamera(actors.securityCamera, deltaTime);
   }
@@ -361,14 +398,49 @@ function updateWalkingVisitor(visitor, deltaTime) {
 }
 
 /**
- * Update security camera sweep animation
+ * Update security camera patrol and sweep animation
  */
 function updateSecurityCamera(camera, deltaTime) {
   const data = camera.userData;
-  data.sweepTime += deltaTime * data.sweepSpeed;
 
-  const sweep = Math.sin(data.sweepTime) * data.sweepAngle * 0.5;
-  camera.rotation.y = data.centerRotation + sweep;
+  if (data.type === "patrolling") {
+    // Move along patrol path
+    data.pathProgress += data.speed * deltaTime;
+
+    // Loop path
+    if (data.pathProgress >= 1) {
+      data.pathProgress = 0;
+    }
+
+    // Get current and next position
+    const currentPos = getPathPoint(data.path, data.pathProgress);
+    const nextPos = getPathPoint(
+      data.path,
+      Math.min(data.pathProgress + 0.01, 1)
+    );
+
+    // Update position
+    camera.position.set(currentPos.x, currentPos.y, currentPos.z);
+
+    // Update rotation to face movement direction
+    const direction = new THREE.Vector3(
+      nextPos.x - currentPos.x,
+      0,
+      nextPos.z - currentPos.z
+    ).normalize();
+    const angle = Math.atan2(direction.x, direction.z);
+    camera.rotation.y = angle;
+
+    // Add sweeping motion on top of rotation
+    data.sweepTime += deltaTime * data.sweepSpeed;
+    const sweep = Math.sin(data.sweepTime) * data.sweepAngle * 0.3;
+    camera.rotation.y += sweep;
+  } else {
+    // Original sweeping behavior (if not patrolling)
+    data.sweepTime += deltaTime * data.sweepSpeed;
+    const sweep = Math.sin(data.sweepTime) * data.sweepAngle * 0.5;
+    camera.rotation.y = data.centerRotation + sweep;
+  }
 }
 
 /**

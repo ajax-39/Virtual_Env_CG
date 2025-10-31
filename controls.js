@@ -11,7 +11,7 @@ export class CameraController {
     this.camera = camera;
     this.renderer = renderer;
     this.roomHeight = roomHeight;
-    this.mode = "orbit"; // 'orbit' or 'firstPerson'
+    this.mode = "firstPerson"; // Default to first-person mode
 
     // Orbit controls
     this.orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -32,7 +32,7 @@ export class CameraController {
       right: false,
     };
 
-    this.moveSpeed = 5.0;
+    this.moveSpeed = 12.0; // Increased from 5.0 for faster movement
     this.velocity = new THREE.Vector3();
     this.direction = new THREE.Vector3();
 
@@ -42,6 +42,9 @@ export class CameraController {
     // UI elements
     this.crosshair = document.getElementById("crosshair");
     this.cameraModeText = document.getElementById("camera-mode");
+
+    // Initialize with first-person mode
+    this.initializeFirstPersonMode();
   }
 
   setupOrbitControls() {
@@ -78,6 +81,37 @@ export class CameraController {
     this.pointerLockControls.addEventListener("unlock", () => {
       console.log("Pointer unlocked");
     });
+  }
+
+  initializeFirstPersonMode() {
+    // Disable orbit controls
+    this.orbitControls.enabled = false;
+
+    // Set camera to eye level
+    this.camera.position.y = 1.6;
+
+    // Show crosshair
+    if (this.crosshair) {
+      this.crosshair.classList.remove("hidden");
+    }
+
+    // Update UI text
+    if (this.cameraModeText) {
+      this.cameraModeText.textContent = "Mode: First-Person (WASD to move)";
+    }
+
+    // Auto-lock pointer on first click
+    const self = this;
+    const autoLockHandler = () => {
+      if (self.mode === "firstPerson") {
+        self.pointerLockControls.lock();
+      }
+    };
+    this.renderer.domElement.addEventListener("click", autoLockHandler, {
+      once: true,
+    });
+
+    console.log("First-Person mode initialized");
   }
 
   setupKeyboardControls() {

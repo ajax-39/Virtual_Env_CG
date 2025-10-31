@@ -33,6 +33,10 @@ export function createEnvironment(scene) {
   const ceiling = createCeiling(roomWidth, roomDepth, roomHeight);
   environmentGroup.add(ceiling);
 
+  // Add decorative elements
+  const decorations = createDecorations(roomWidth, roomDepth, roomHeight);
+  decorations.forEach((decoration) => environmentGroup.add(decoration));
+
   scene.add(environmentGroup);
 
   return {
@@ -57,9 +61,10 @@ function createFloor(width, depth) {
 
   const floorMaterial = new THREE.MeshStandardMaterial({
     map: marbleTexture,
-    roughness: 0.15,
-    metalness: 0.1,
-    envMapIntensity: 1.0,
+    roughness: 0.08,
+    metalness: 0.3,
+    envMapIntensity: 1.5,
+    color: 0xffffff,
   });
 
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -82,9 +87,9 @@ function createWalls(width, depth, height) {
 
   const wallMaterial = new THREE.MeshStandardMaterial({
     map: wallTexture,
-    roughness: 0.95,
-    metalness: 0.0,
-    color: 0xf8f8f0,
+    roughness: 0.9,
+    metalness: 0.05,
+    color: 0xfafaf5,
   });
 
   // Back wall (with entrance)
@@ -175,9 +180,9 @@ function createWalls(width, depth, height) {
 function createCeiling(width, depth, height) {
   const ceilingGeometry = new THREE.PlaneGeometry(width, depth);
   const ceilingMaterial = new THREE.MeshStandardMaterial({
-    color: 0xe0e0e0,
-    roughness: 0.9,
-    metalness: 0.0,
+    color: 0xf5f5f5,
+    roughness: 0.8,
+    metalness: 0.1,
   });
 
   const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
@@ -187,4 +192,177 @@ function createCeiling(width, depth, height) {
   ceiling.name = "Ceiling";
 
   return ceiling;
+}
+
+/**
+ * Create decorative elements for the gallery
+ */
+function createDecorations(width, depth, height) {
+  const decorations = [];
+
+  // Add decorative plants in corners
+  const plantPositions = [
+    { x: -width / 2 + 1.5, z: depth / 2 - 1.5 },
+    { x: width / 2 - 1.5, z: depth / 2 - 1.5 },
+  ];
+
+  plantPositions.forEach((pos) => {
+    const plant = createDecorativePlant();
+    plant.position.set(pos.x, 0, pos.z);
+    decorations.push(plant);
+  });
+
+  // Add decorative ceiling lights (chandeliers)
+  const chandPositions = [
+    { x: -5, z: 0 },
+    { x: 5, z: 0 },
+    { x: 0, z: -4 },
+  ];
+
+  chandPositions.forEach((pos) => {
+    const chandelier = createChandelier();
+    chandelier.position.set(pos.x, height - 0.8, pos.z);
+    decorations.push(chandelier);
+  });
+
+  // Add decorative baseboards along walls
+  const baseboard1 = createBaseboard(width, 0.1, 0.05);
+  baseboard1.position.set(0, 0.025, -depth / 2);
+  decorations.push(baseboard1);
+
+  const baseboard2 = createBaseboard(width, 0.1, 0.05);
+  baseboard2.position.set(0, 0.025, depth / 2);
+  decorations.push(baseboard2);
+
+  const baseboard3 = createBaseboard(0.05, 0.1, depth);
+  baseboard3.position.set(-width / 2, 0.025, 0);
+  decorations.push(baseboard3);
+
+  const baseboard4 = createBaseboard(0.05, 0.1, depth);
+  baseboard4.position.set(width / 2, 0.025, 0);
+  decorations.push(baseboard4);
+
+  return decorations;
+}
+
+/**
+ * Create a decorative plant
+ */
+function createDecorativePlant() {
+  const plantGroup = new THREE.Group();
+
+  // Pot
+  const potGeometry = new THREE.CylinderGeometry(0.3, 0.25, 0.4, 16);
+  const potMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b4513,
+    roughness: 0.8,
+    metalness: 0.1,
+  });
+  const pot = new THREE.Mesh(potGeometry, potMaterial);
+  pot.position.y = 0.2;
+  pot.castShadow = true;
+  plantGroup.add(pot);
+
+  // Soil
+  const soilGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.05, 16);
+  const soilMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3e2723,
+    roughness: 1.0,
+  });
+  const soil = new THREE.Mesh(soilGeometry, soilMaterial);
+  soil.position.y = 0.42;
+  plantGroup.add(soil);
+
+  // Plant leaves (simplified)
+  for (let i = 0; i < 5; i++) {
+    const leafGeometry = new THREE.ConeGeometry(0.15, 0.6, 8);
+    const leafMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d5016,
+      roughness: 0.9,
+    });
+    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+    const angle = (i / 5) * Math.PI * 2;
+    leaf.position.set(
+      Math.cos(angle) * 0.15,
+      0.7 + Math.random() * 0.2,
+      Math.sin(angle) * 0.15
+    );
+    leaf.rotation.z = Math.PI / 6;
+    leaf.rotation.y = angle;
+    leaf.castShadow = true;
+    plantGroup.add(leaf);
+  }
+
+  return plantGroup;
+}
+
+/**
+ * Create a decorative chandelier
+ */
+function createChandelier() {
+  const chandGroup = new THREE.Group();
+
+  // Main ring
+  const ringGeometry = new THREE.TorusGeometry(0.3, 0.03, 16, 32);
+  const ringMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffd700,
+    roughness: 0.2,
+    metalness: 0.9,
+  });
+  const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+  ring.rotation.x = Math.PI / 2;
+  chandGroup.add(ring);
+
+  // Hanging crystals
+  for (let i = 0; i < 6; i++) {
+    const crystalGeometry = new THREE.ConeGeometry(0.04, 0.2, 6);
+    const crystalMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8,
+      roughness: 0,
+      metalness: 0.1,
+      transmission: 0.9,
+      thickness: 0.5,
+    });
+    const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+    const angle = (i / 6) * Math.PI * 2;
+    crystal.position.set(Math.cos(angle) * 0.25, -0.15, Math.sin(angle) * 0.25);
+    crystal.castShadow = true;
+    chandGroup.add(crystal);
+  }
+
+  // Central light
+  const lightGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+  const lightMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffcc,
+    transparent: true,
+    opacity: 0.9,
+  });
+  const light = new THREE.Mesh(lightGeometry, lightMaterial);
+  light.position.y = -0.1;
+  chandGroup.add(light);
+
+  // Add point light
+  const pointLight = new THREE.PointLight(0xffffcc, 0.3, 5);
+  pointLight.position.y = -0.1;
+  chandGroup.add(pointLight);
+
+  return chandGroup;
+}
+
+/**
+ * Create decorative baseboard
+ */
+function createBaseboard(width, height, depth) {
+  const geometry = new THREE.BoxGeometry(width, height, depth);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x4a4a4a,
+    roughness: 0.7,
+    metalness: 0.2,
+  });
+  const baseboard = new THREE.Mesh(geometry, material);
+  baseboard.castShadow = true;
+  baseboard.receiveShadow = true;
+  return baseboard;
 }

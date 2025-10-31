@@ -67,8 +67,8 @@ class VirtualGallery {
 
   createScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1a1a1a);
-    this.scene.fog = new THREE.Fog(0x1a1a1a, 20, 40);
+    this.scene.background = new THREE.Color(0x0a0a0a);
+    this.scene.fog = new THREE.Fog(0x0a0a0a, 25, 50);
     this.updateProgress(10);
   }
 
@@ -79,7 +79,9 @@ class VirtualGallery {
       0.1,
       1000
     );
-    this.camera.position.set(0, 1.6, 10);
+    // Set camera to first-person eye level at entrance
+    this.camera.position.set(0, 1.6, 8);
+    this.camera.lookAt(0, 1.6, 0);
     this.updateProgress(20);
   }
 
@@ -89,6 +91,7 @@ class VirtualGallery {
       canvas: canvas,
       antialias: true,
       alpha: false,
+      powerPreference: "high-performance",
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -101,7 +104,7 @@ class VirtualGallery {
     // Better color rendering
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMappingExposure = 1.2;
 
     this.updateProgress(30);
   }
@@ -148,17 +151,18 @@ class VirtualGallery {
       this.environment.roomHeight
     );
 
-    this.particles = createParticles(
-      this.scene,
-      this.environment.roomWidth,
-      this.environment.roomDepth,
-      this.environment.roomHeight
-    );
+    // Particles disabled
+    // this.particles = createParticles(
+    //   this.scene,
+    //   this.environment.roomWidth,
+    //   this.environment.roomDepth,
+    //   this.environment.roomHeight
+    // );
 
     // Create teleport points (optional)
     this.teleportPoints = createTeleportPoints(this.scene, this.camera);
 
-    console.log("Actors and particles created");
+    console.log("Actors created");
     this.updateProgress(80);
   }
 
@@ -219,8 +223,8 @@ class VirtualGallery {
     // Update actors
     updateActors(this.actors, deltaTime);
 
-    // Update particles
-    updateParticles(this.particles, deltaTime);
+    // Update particles - disabled
+    // updateParticles(this.particles, deltaTime);
 
     // Animate hotspots
     animateHotspots(this.artworks.artworks, elapsedTime);
